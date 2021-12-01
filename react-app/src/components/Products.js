@@ -1,37 +1,34 @@
 import React from 'react';
 
 function Products(props){
-    function delElement(id){
-        props.delete(id);
-    }
-
-    function changeElement(id){
-        let newValue = document.getElementById(id).value;
-        props.change(id, newValue);
+    function pridajProdukt(id){
+        props.pridaj(id);
     }
     function rows(){
-        return props.data.map((element)=>{
+        return props.data.map((element, index)=>{
+            
             return (
-                <tr key={element.id}>
+                <tr key={index}>
+                    <td><img width="80" src={element.img}></img></td>
                     <td>{element.nazov}</td>
-                    <td><button onClick={e => {delElement(element.id)}}>X</button></td>
-                    <td><input type="text" id={element.id}></input></td>
-                    <td><button onClick={e => {changeElement(element.id)}}>Change</button></td>
+                    <td>{element.cena} €</td>
+                    <td><button onClick={e => {pridajProdukt(element.id)}}>Pridať</button></td>
                 </tr>
             );
         });
     }
     return (
-        <div className="row">
+        <div className="produkty">
+            <h2>Produkty</h2>
             <table border="1">
-                <thead>
+                {/* <thead>
                     <tr>
+                        <th>Obrazok</th>
                         <th>Nazov</th>
-                        <th>DEL</th>
-                        <th>novy nazov</th>
-                        <th>CHANGE</th>
+                        <th>Cena</th>
+                        <th>Pridať</th>
                     </tr>
-                </thead>
+                </thead> */}
                 <tbody>
                     {
                         rows()

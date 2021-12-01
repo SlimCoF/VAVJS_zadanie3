@@ -12,7 +12,7 @@ module.exports = {
         rules: [
             {
                 test: /\.(js|jsx)$/,
-                exclude: '/node_modules/',
+                exclude: /node_modules/,
                 use: 'babel-loader'
             }
         ]
@@ -21,7 +21,7 @@ module.exports = {
         static: {
             directory: path.join(__dirname, 'static')
         },
-        port: 8080,
+        port: 9090,
         compress: true
     }
 };
