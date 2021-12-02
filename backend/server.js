@@ -7,6 +7,7 @@ const { config } = require('process');
 
 let connectionMade = false;
 let connection = null;
+let addCounter = 0;
 function connectDB() {
     if(connectionMade===false) {
         connection = mysql.createConnection({
@@ -58,26 +59,40 @@ app.get('/data', (req, res)=>{
     connectDB();
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin','*');
-
+    let data = [];
     connection.query('SELECT * FROM produkty', function(error,results){
         if(error){
             res.set({
                 'Content-Type': 'text/html'
             });
             res.status(500).send('<html><body><h1>DB GET ERROR</h1></body></html>');
+        }else{
+            data = results;
+            connection.query('SELECT * FROM reklama', function(error,results){
+                if(error){
+                    res.set({
+                        'Content-Type': 'text/html'
+                    });
+                    res.status(500).send('<html><body><h1>DB GET ERROR</h1></body></html>');
+                }else{
+                    data.push(results[0]);
+                    // addCounter = results.counter;
+                }
+                // console.log(data);
+                addCounter = data[data.length -1].counter;
+                res.status(200).json(data);
+            });
         }
-        // console.log(results);
-        res.status(200).json(results);
     });
 });
 
-app.options('/data', (req, res)=>{
-    console.log(req.method+' options /data');
+// app.options('/data', (req, res)=>{
+//     console.log(req.method+' options /data');
 
-    res.statusCode = 200;
-    res.setHeader('Access-Controll-Allow-Origin', '*');
-    res.end();
-})
+//     res.statusCode = 200;
+//     res.setHeader('Access-Controll-Allow-Origin', '*');
+//     res.end();
+// })
 
 // TOTO TU BUDE!!!
 app.post('/data', (req,res)=>{
@@ -216,45 +231,58 @@ app.post('/data', (req,res)=>{
 //     });
 // });
 
-app.delete('/data', (req, res)=>{
-    console.log(req.method+ ' delete /data');
-    connectDB();
+// app.delete('/data', (req, res)=>{
+//     console.log(req.method+ ' delete /data');
+//     connectDB();
 
-    req.on('data', function(data){
-        console.log('data:' +data);
-        let id = JSON.parse(data).id;
-        console.log('id:' +id);
-        res.setHeader('Content-Type', 'application/json');
-        // res.setHeader('Access-Control-Allow-Origin','*');
-        connection.query('DELETE FROM produkty WHERE id='+id+';', function(error,results){
-            if(error){
-                res.status(500).send(JSON.stringify({'status': 'error'}));
-            }
-            console.log('ending: ');
-            console.log(res)
-            res.status(200).end(JSON.stringify({'status': 'ok'}));
-        });
-    });
-});
+//     req.on('data', function(data){
+//         console.log('data:' +data);
+//         let id = JSON.parse(data).id;
+//         console.log('id:' +id);
+//         res.setHeader('Content-Type', 'application/json');
+//         // res.setHeader('Access-Control-Allow-Origin','*');
+//         connection.query('DELETE FROM produkty WHERE id='+id+';', function(error,results){
+//             if(error){
+//                 res.status(500).send(JSON.stringify({'status': 'error'}));
+//             }
+//             console.log('ending: ');
+//             console.log(res)
+//             res.status(200).end(JSON.stringify({'status': 'ok'}));
+//         });
+//     });
+// });
 
 app.put('/data', (req, res)=>{
-    console.log(req.method+ ' delete /data');
+    console.log(req.method+ ' put /data');
     connectDB();
 
+    res.setHeader('Access-Control-Allow-Origin','*');
+    res.setHeader('Content-Type', 'application/json');
+
     req.on('data', function(data){
-        console.log('data:' +data);
-        let id = JSON.parse(data).id;
-        let newValue = JSON.parse(data).nazov;
-        console.log('id:' +id, 'nazov:' +newValue);
-        res.setHeader('Content-Type', 'application/json');
-        // res.setHeader('Access-Control-Allow-Origin','*');
-        connection.query('UPDATE produkty SET nazov=\''+newValue+'\' WHERE id='+id+';', function(error,results){
+        let jsonData = JSON.parse(data);
+
+        let id = jsonData.id;
+        let imgUrl = jsonData.imgUrl;
+        let pageUrl = jsonData.pageUrl;
+        addCounter += 1;
+
+        connection.query('UPDATE `reklama` SET `id` = \''+ id + '\', `imgUrl` = \''+ imgUrl +'\',`pageUrl` = \''+ pageUrl +'\',`counter` = \''+ addCounter +'\' WHERE `id` = \'' + id + '\'', function(error){
             if(error){
-                res.status(500).send(JSON.stringify({'status': 'error'}));
+                res.end(JSON.stringify(
+                    {
+                        'status': 'error',
+                        'message': 'Put to reklama failed!!'
+                    }
+                ));
+            }else{
+                res.end(JSON.stringify(
+                    {
+                        'status': 'ok',
+                        'content': addCounter
+                    }
+                ));
             }
-            console.log('ending: ');
-            console.log(res)
-            res.status(200).end(JSON.stringify({'status': 'ok'}));
         });
     });
 });

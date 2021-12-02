@@ -1,7 +1,6 @@
 import React from 'react';
 
 function Basket(props){
-    let sum=0;
     function odoberProdukt(id){
         props.odober(id);
     }

@@ -15,11 +15,16 @@ import Add from './components/Add.js';
 function App(){
     const [data, setData] = useState(['a']);
     const [basket, setBasket] = useState([]);
+    const [add, setAdd] = useState({});
 
     function getDataFromServer(){
         return fetch('http://localhost:8080/data')
         .then(data=>data.json())
-        .then(data=>setData(data.map(e=>e)));
+        .then(data=>{
+            setData(data.slice(0, -1).map(e=>e));
+            console.log(data[data.length -1]);
+            setAdd(data[data.length -1]);
+        });
     }
     // function addElement(element){
     //     console.log('element: ' +element);
@@ -120,16 +125,31 @@ function App(){
            }
         });
     }
+    function pocitadlo(){
+        fetch('http://localhost:8080/data', {
+            method: 'PUT',
+            headers: {
+                'Content-type': 'application/json',
+            },
+            body: JSON.stringify(add)
+        }).then(e=>e.json())
+        .then(e=>{
+            let newAdd = add;
+            newAdd.counter = e.content;
+            setAdd(newAdd);
+        });
+    }
+
     useEffect(()=>{
         getDataFromServer();
     },[]);
+
     return (
         <div className="container">
             <Products data={data} pridaj={pridajProdukt}/>
             <Basket data={basket} odober={odoberProdukt}/>
             <Order buy={kupitKosik}/>
-            <h2>Poďakovanie</h2>
-            <Add />
+            <Add add={add} klik={pocitadlo}/>
         </div>
     )
 }
