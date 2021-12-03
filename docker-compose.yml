@@ -13,8 +13,13 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: eshop
+      MYSQL_USER: root
+      MYSQL_PASSWORD: root
     container_name: mydb
 
+    volumes: 
+      - ./init:/docker-entrypoint-initdb.d
   adminer:
     image: adminer
     restart: always
