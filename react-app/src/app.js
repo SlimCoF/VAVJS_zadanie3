@@ -18,6 +18,7 @@ function App() {
     const [basket, setBasket] = useState([]);
     const [add, setAdd] = useState({});
     const [orders, setOrders] = useState(['a']);
+    const [customers, setCustomers] = useState(['a']);
 
     const [counter, setCounter] = useState(0);
 
@@ -28,12 +29,17 @@ function App() {
 
     function getDataFromServer() {
         return fetch('http://localhost:8080/data')
-            .then(data => data.json())
-            .then(data => {
-                setProducts(data.slice(0, -1).map(e => e));
-                // console.log(data[data.length - 1]);
-                setAdd(data[data.length - 1]);
-                setCounter(data[data.length - 1].counter);
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'ok') {
+                    setProducts(response.content.produkty.map(e => e));
+                    setAdd(response.content.reklama);
+                    setCounter(response.content.reklama.counter);
+                } else if (response.status === 'error') {
+                    console.log(response.content);
+                } else {
+                    console.log('neznama odpoved!');
+                }
             });
     }
 
@@ -83,14 +89,13 @@ function App() {
         })
             .then(response => response.json())
             .then(response => {
-                if (response.status === "error") {
-                    alert(response.message)
-                } else if (response.status === "ok") {
+                if (response.status === 'ok') {
                     setaddOpen(true);
                     setBasket([]);
+                } else if (response.status === 'error') {
+                    alert(response.content)
                 } else {
-                    console.log(response);
-                    console.log("unknown response!!");
+                    console.log("neznama odpoved!!");
                 }
             });
     }
@@ -102,22 +107,89 @@ function App() {
             },
             body: JSON.stringify(add)
         })
-            .then(e => e.json())
-            .then(e => {
-                setCounter(e.content);
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'ok') {
+                    setCounter(response.content);
+                } else if (response.status === 'error') {
+                    console.log(response.content)
+                } else {
+                    console.log("neznama odpoved!!");
+                }
             });
     }
 
     function ziskajObjednavky() {
 
         return fetch('http://localhost:8080/admin')
-            .then(data => data.json())
-            .then(data => setOrders(data.map(e => e)));
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'ok') {
+                    setOrders(response.content.objednavky.map(e => e));
+                    setCustomers(response.content.zakaznici.map(e => e));
+                } else if (response.status === 'error') {
+                    console.log(response.content)
+                } else {
+                    console.log("neznama odpoved!!");
+                }
+            });
     }
 
     function otvorAdmina(state) {
         setAdminOpen(state);
         ziskajObjednavky();
+    }
+
+    function potvrdObjednavku(id) {
+        fetch('http://localhost:8080/admin', {
+            method: 'PUT',
+            headers: {
+                'Content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                method: 'potvrdObjednavku',
+                content: id
+            })
+        })
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'ok') {
+                    ziskajObjednavky();
+                } else if (response.status === 'error') {
+                    console.log(response.content)
+                } else {
+                    console.log("neznama odpoved!!");
+                }
+            });
+    }
+
+    function zmenReklamu(pageUrl, imgUrl) {
+        fetch('http://localhost:8080/admin', {
+            method: 'PUT',
+            headers: {
+                'Content-type': 'application/json',
+            },
+            body: JSON.stringify({
+                method: 'zmenaReklamy',
+                content:
+                {
+                    pageUrl: pageUrl,
+                    imgUrl: imgUrl
+                }
+            })
+        })
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'ok') {
+                    getDataFromServer();
+                } else if (response.status === 'nothingChanged') {
+                    console.log("Nič sa nezmenilo");
+                } else if (response.status === 'error') {
+                    console.log(response.content);
+                } else {
+                    console.log("neznama odpoved!!");
+                }
+            });
     }
     useEffect(() => {
         getDataFromServer();
@@ -125,11 +197,37 @@ function App() {
 
     return (
         <div className="container">
-            <Products products={products} pridaj={pridajProdukt} />
-            <Basket basket={basket} odober={odoberProdukt} basketOpen={basketOpen} editOpen={state => setBasketOpen(state)} />
-            <Order buy={kupitKosik} orderOpen={orderOpen} editOpen={state => setOrderOpen(state)} />
-            <Add add={add} klik={pocitadlo} addOpen={addOpen} />
-            <Admin orders={orders} counter={counter} add={add} products={products} adminOpen={adminOpen} editOpen={otvorAdmina} />
+            <Products
+                products={products}
+                pridaj={pridajProdukt}
+            />
+            <Basket
+                basket={basket}
+                odober={odoberProdukt}
+                basketOpen={basketOpen}
+                editOpen={state => setBasketOpen(state)}
+            />
+            <Order
+                buy={kupitKosik}
+                orderOpen={orderOpen}
+                editOpen={state => setOrderOpen(state)}
+            />
+            <Add
+                add={add}
+                klik={pocitadlo}
+                addOpen={addOpen}
+            />
+            <Admin
+                orders={orders}
+                counter={counter}
+                add={add}
+                products={products}
+                customers={customers}
+                setStatus={potvrdObjednavku}
+                changeAdd={zmenReklamu}
+                adminOpen={adminOpen}
+                editOpen={otvorAdmina}
+            />
         </div>
     )
 }

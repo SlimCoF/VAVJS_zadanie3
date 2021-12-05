@@ -5,7 +5,7 @@ import React from 'react';
 function Add(props) {
     const style = {
         width: "280px",
-        'text-align': "center"
+        'textAlign': "center"
     };
 
     function pocitadlo() {

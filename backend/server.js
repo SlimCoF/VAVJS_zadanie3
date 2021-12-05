@@ -1,9 +1,9 @@
+const { table } = require('console');
 const express = require('express');
 const app = express();
 const port = 8080;
 const fs = require('fs');
 const mysql = require('mysql');
-const { config } = require('process');
 
 let connectionMade = false;
 let connection = null;
@@ -59,52 +59,42 @@ app.get('/data', (req, res) => {
     connectDB();
     res.setHeader('Content-Type', 'application/json');
     res.setHeader('Access-Control-Allow-Origin', '*');
-    let data = [];
+    let data = {};
     connection.query('SELECT * FROM produkty', function (error, results) {
         if (error) {
-            res.set({
-                'Content-Type': 'text/html'
-            });
-            res.status(500).send('<html><body><h1>DB GET ERROR</h1></body></html>');
+            res.status(500).end(JSON.stringify(
+                {
+                    status: 'error',
+                    content: 'SELECT from \'produkty\' failed!!'
+                }
+            ));
         } else {
-            data = results;
+            data.produkty = results;
             connection.query('SELECT * FROM reklama', function (error, results) {
                 if (error) {
-                    res.set({
-                        'Content-Type': 'text/html'
-                    });
-                    res.status(500).send('<html><body><h1>DB GET ERROR</h1></body></html>');
+                    res.status(500).end(JSON.stringify(
+                        {
+                            status: 'error',
+                            content: 'SELECT from \'reklama\' failed!!'
+                        }
+                    ));
                 } else {
-                    data.push(results[0]);
-                    addCounter = data[data.length - 1].counter;
-                    res.status(200).json(data);
+                    data.reklama = results[0]
+                    addCounter = data.reklama.counter;
+                    res.status(200).json(
+                        {
+                            status: 'ok',
+                            content: data
+                        }
+                    );
                 }
             });
         }
     });
 });
 
-app.get('/admin', (req, res) => {
-    console.log(req.method + ' rquest /admin');
-    connectDB();
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-
-    connection.query('SELECT * FROM objednavky', function (error, results) {
-        if (error) {
-            res.set({
-                'Content-Type': 'text/html'
-            });
-            res.status(500).send('<html><body><h1>DB GET ERROR</h1></body></html>');
-        } else {
-            res.status(200).json(results);
-        }
-    });
-});
-
-
-// TOTO TU BUDE!!!
 app.post('/data', (req, res) => {
+    console.log(req.method + ' post /data');
     connectDB();
 
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -116,28 +106,28 @@ app.post('/data', (req, res) => {
         let items = JSON.parse(data).items;
 
         if (items.length === 0) {
-            res.end(JSON.stringify(
+            res.status(500).end(JSON.stringify(
                 {
-                    'status': 'error',
-                    'message': 'Košík je prázdny!!'
+                    status: 'error',
+                    content: 'Košík je prázdny!!'
                 }
             ));
         } else {
             connection.query('SELECT * FROM zakaznici', function (error, results) {
                 if (error) {
-                    res.end(JSON.stringify(
+                    res.status(500).end(JSON.stringify(
                         {
-                            'status': 'error',
-                            'message': 'SELECT from zakaznici failed!!'
+                            status: 'error',
+                            content: 'SELECT from \'zakaznici\' failed!!'
                         }
                     ));
                 } else {
                     errorMessage = customerConditions(values, results);
                     if (errorMessage.length !== 0) {
-                        res.end(JSON.stringify(
+                        res.status(500).end(JSON.stringify(
                             {
-                                'status': 'error',
-                                'message': errorMessage
+                                status: 'error',
+                                content: errorMessage
                             }
                         ));
                     } else {
@@ -146,25 +136,21 @@ app.post('/data', (req, res) => {
                         // Pridaj zaznam do tabulky zakaznici
                         connection.query('INSERT INTO `zakaznici` (`email`, `meno`, `ulica`, `cislo`, `mesto`, `psc`)VALUES (\'' + values.email + '\', \'' + values.name + '\', \'' + values.street + '\', \'' + values.number + '\', \'' + values.city + '\', \'' + values.psc + '\')', function (error, results) {
                             if (error) {
-                                res.end(JSON.stringify(
+                                res.status(500).end(JSON.stringify(
                                     {
-                                        'status': 'error',
-                                        'message': 'Insert to zakaznici failed!!'
+                                        status: 'error',
+                                        content: 'INSERT to \'zakaznici\' failed!!'
                                     }
                                 ));
                             } else {
                                 // Do tabulky objednavky pridaj tolko zaznamov kolko si zakaznik praje kupit produktov
                                 zakaznik_id = results.insertId;
-                                // res.end(JSON.stringify({'status': 'ok'}));
 
                                 let fail = false;
                                 let errorMessage = "";
                                 items.forEach(element => {
                                     let produkt_id = element.id;
                                     let count = element.mnozstvo;
-
-                                    console.log("produkt: " + produkt_id);
-                                    console.log("zakaznik: " + zakaznik_id);
 
                                     for (let i = 0; i < count; i++) {
                                         connection.query('INSERT INTO `objednavky` (`produkt_id`, `zakaznik_id`, `stav`) VALUES (\'' + produkt_id + '\', \'' + zakaznik_id + '\', \'' + 0 + '\')', function (error) {
@@ -179,65 +165,27 @@ app.post('/data', (req, res) => {
                                 });
 
                                 if (fail) {
-                                    res.end(JSON.stringify(
+                                    res.status(500).end(JSON.stringify(
                                         {
-                                            'status': 'error',
-                                            'message': errorMessage
+                                            status: 'error',
+                                            content: errorMessage
                                         }
                                     ));
                                 } else {
-                                    res.end(JSON.stringify({ 'status': 'ok' }));
+                                    res.status(200).end(JSON.stringify(
+                                        {
+                                            status: 'ok'
+                                        }
+                                    ));
                                 }
                             }
                         });
                     }
-
                 }
             });
         }
     });
 });
-// app.post('/data', (req, res)=>{
-//     console.log(req.method+' receve /data');
-//     connectDB();
-//     res.setHeader('Content-Type', 'application/json');
-//     res.setHeader('Access-Control-Allow-Origin','*');
-//     req.on('data', function(data){
-//         let input = JSON.parse(data).input;
-//         connection.query('INSERT INTO produkty (nazov) VALUES(\''+ input +'\')', 
-//         function(error,results){
-//             if(error){
-//                 // res.status(500).send('<html><body><h1>DB POST ERROR</h1></body></html>');
-//                 res.statusCode = 500;
-//                 res.end(JSON.stringify({'status': 'error'}));
-//             }
-//             // console.log(results);
-//             // res.status(200).json(results);
-//             res.end(JSON.stringify({'status': 'ok'}));
-//         });
-//     });
-// });
-
-// app.delete('/data', (req, res)=>{
-//     console.log(req.method+ ' delete /data');
-//     connectDB();
-
-//     req.on('data', function(data){
-//         console.log('data:' +data);
-//         let id = JSON.parse(data).id;
-//         console.log('id:' +id);
-//         res.setHeader('Content-Type', 'application/json');
-//         // res.setHeader('Access-Control-Allow-Origin','*');
-//         connection.query('DELETE FROM produkty WHERE id='+id+';', function(error,results){
-//             if(error){
-//                 res.status(500).send(JSON.stringify({'status': 'error'}));
-//             }
-//             console.log('ending: ');
-//             console.log(res)
-//             res.status(200).end(JSON.stringify({'status': 'ok'}));
-//         });
-//     });
-// });
 
 app.put('/data', (req, res) => {
     console.log(req.method + ' put /data');
@@ -250,23 +198,21 @@ app.put('/data', (req, res) => {
         let jsonData = JSON.parse(data);
 
         let id = jsonData.id;
-        let imgUrl = jsonData.imgUrl;
-        let pageUrl = jsonData.pageUrl;
         addCounter += 1;
 
         connection.query('UPDATE `reklama` SET `counter` = \'' + addCounter + '\' WHERE `id` = \'' + id + '\'', function (error) {
             if (error) {
-                res.end(JSON.stringify(
+                res.status(500).end(JSON.stringify(
                     {
-                        'status': 'error',
-                        'message': 'Put to reklama failed!!'
+                        status: 'error',
+                        content: 'UPDATE to \'reklama\' failed!!'
                     }
                 ));
             } else {
-                res.end(JSON.stringify(
+                res.status(500).end(JSON.stringify(
                     {
-                        'status': 'ok',
-                        'content': addCounter
+                        status: 'ok',
+                        content: addCounter
                     }
                 ));
             }
@@ -274,6 +220,107 @@ app.put('/data', (req, res) => {
     });
 });
 
+app.get('/admin', (req, res) => {
+    console.log(req.method + ' rquest /admin');
+    connectDB();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    let data = {};
+    connection.query('SELECT * FROM objednavky', function (error, results) {
+        if (error) {
+            res.status(500).end(JSON.stringify(
+                {
+                    status: 'error',
+                    content: 'SELECT from \'objednavky\' failed!!'
+                }
+            ));
+        } else {
+            data.objednavky = results;
+            connection.query('SELECT * FROM zakaznici', function (error, results) {
+                if (error) {
+                    res.status(500).end(JSON.stringify(
+                        {
+                            status: 'error',
+                            content: 'SELECT from \'zakaznici\' failed!!'
+                        }
+                    ));
+                } else {
+                    data.zakaznici = results;
+                    res.status(200).json(
+                        {
+                            status: 'ok',
+                            content: data
+                        }
+                    );
+                }
+            });
+        }
+    });
+});
+
+app.put('/admin', (req, res) => {
+    console.log(req.method + ' put /admin');
+    connectDB();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    req.on('data', function (data) {
+        let jsonData = JSON.parse(data);
+        if (jsonData.method === "potvrdObjednavku") {
+            let id = jsonData.content;
+            connection.query('UPDATE `objednavky` SET `stav` = \'' + 1 + '\' WHERE `id` = \'' + id + '\';', function (error) {
+                if (error) {
+                    res.status(500).end(JSON.stringify(
+                        {
+                            status: 'error',
+                            content: 'UPDATE to \'objednavky\' failed!!'
+                        }
+                    ));
+                } else {
+                    res.status(200).end(JSON.stringify({ status: 'ok' }));
+                }
+            });
+        } else if (jsonData.method === "zmenaReklamy") {
+            let pageUrl = JSON.parse(data).content.pageUrl
+            let imgUrl = JSON.parse(data).content.imgUrl
+            if (pageUrl !== '') {
+                connection.query('UPDATE `reklama` SET `pageUrl` = \'' + pageUrl + '\' WHERE `id` = \'' + 1 + '\';', function (error) {
+                    if (error) {
+                        res.status(500).end(JSON.stringify(
+                            {
+                                status: 'error',
+                                content: 'UPDATE to \'reklama\' failed!!'
+                            }
+                        ));
+                        return;
+                    } else {
+                        console.log("PAGE URL SUCESSFULLY CHANGES!!");
+                    }
+                });
+            }
+            if (imgUrl !== '') {
+                connection.query('UPDATE `reklama` SET `imgUrl` = \'' + imgUrl + '\' WHERE `id` = \'' + 1 + '\';', function (error) {
+                    if (error) {
+                        res.status(500).end(JSON.stringify(
+                            {
+                                status: 'error',
+                                content: 'UPDATE to \'objednavky\' failed!!'
+                            }
+                        ));
+                        return;
+                    } else {
+                        console.log("IMG URL SUCESSFULLY CHANGES!!");
+                    }
+                });
+            }
+            if (imgUrl === '' && pageUrl === '') {
+                res.status(200).end(JSON.stringify({ status: 'nothingChanged' }));
+            } else {
+                res.status(200).end(JSON.stringify({ status: 'ok' }));
+            }
+        }
+    });
+})
 app.listen(port, () => {
     console.log('Express server running v1');
 });
@@ -288,12 +335,13 @@ function notFilled(values) {
     }
     return errorString;
 }
+
 function customerConditions(values, tableData) {
     var errorString = notFilled(values);
     if (errorString === "") {
         // If email is duplicate
-        tableData.forEach(element => {
-            if (element.email === values.email) {
+        tableData.forEach(customer => {
+            if (customer.email === values.email) {
                 errorString += "email (" + values.email + ") už existuje!\n";
                 return;
             }

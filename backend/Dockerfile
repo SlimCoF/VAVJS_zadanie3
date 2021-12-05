@@ -3,7 +3,6 @@ FROM node
 WORKDIR C:\Users\Filip\Desktop\VAVJS_zadanie3\dckr
 COPY package.json ./
 RUN npm install
-ADD init.sql /docker-entrypoint-initdb.d
 COPY ./ ./
 EXPOSE 8080
 CMD ["node","server.js"]

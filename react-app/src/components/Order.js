@@ -3,7 +3,7 @@ import React from "react";
 function Order(props) {
     const style = {
         width: "280px",
-        'text-align': "center"
+        'textAlign': "center"
     };
     function MouseOver(event) {
         event.target.style.background = '#00FFFF';
